@@ -5,6 +5,7 @@ import invariant from 'tiny-invariant';
 import yaml from 'js-yaml';
 
 import logger from './logger';
+import { AlephAlphaCompletionProvider } from './providers/alephalpha';
 import {
   OpenAiAssistantProvider,
   OpenAiCompletionProvider,
@@ -245,7 +246,13 @@ export async function loadApiProvider(
       const modelName = splits.slice(1).join(':');
       return new OllamaCompletionProvider(modelName, providerOptions);
     }
-  } else if (providerPath.startsWith('palm:')) {
+  } else if (providerPath.startsWith('alephalpha:')) { 
+    const splits = providerPath.split(':');
+    const firstPart = splits[1];
+    if (firstPart === 'completion') {
+      const modelName = splits.slice(2).join(':');
+      return new AlephAlphaCompletionProvider(modelName, providerOptions);
+  }else if (providerPath.startsWith('palm:')) {
     const modelName = providerPath.split(':')[1];
     return new PalmChatProvider(modelName, providerOptions);
   } else if (providerPath.startsWith('vertex')) {
