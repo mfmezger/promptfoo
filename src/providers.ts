@@ -251,7 +251,8 @@ export async function loadApiProvider(
     const firstPart = splits[1];
     if (firstPart === 'completion') {
       const modelName = splits.slice(2).join(':');
-      return new AlephAlphaCompletionProvider(modelName, providerOptions);
+      return new AlephAlphaCompletionProvider(modelName, providerOptions);}
+      
   }else if (providerPath.startsWith('palm:')) {
     const modelName = providerPath.split(':')[1];
     return new PalmChatProvider(modelName, providerOptions);
@@ -288,4 +289,5 @@ export default {
   LocalAiCompletionProvider,
   LocalAiChatProvider,
   loadApiProvider,
+  AlephAlphaCompletionProvider
 };
