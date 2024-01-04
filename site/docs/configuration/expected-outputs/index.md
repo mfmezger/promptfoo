@@ -29,18 +29,18 @@ tests:
 
 ## Assertion properties
 
-| Property     | Type   | Required | Description                                                                                          |
-| ------------ | ------ | -------- | ---------------------------------------------------------------------------------------------------- |
-| type         | string | Yes      | Type of assertion                                                                                    |
-| value        | string | No       | The expected value, if applicable                                                                    |
-| threshold    | number | No       | The threshold value, only applicable for similarity                                                  |
-| weight       | string | No       | How heavily to weigh the assertion. Defaults to 1.0                                                  |
-| provider     | string | No       | Some assertions (similarity, llm-rubric, model-graded-\*) require an [LLM provider](/docs/providers) |
-| rubricPrompt | string | No       | LLM rubric grading prompt                                                                            |
+| Property     | Type   | Required | Description                                                                                             |
+| ------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------- |
+| type         | string | Yes      | Type of assertion                                                                                       |
+| value        | string | No       | The expected value, if applicable                                                                       |
+| threshold    | number | No       | The threshold value, applicable only to certain types such as `similar`, `cost`, `javascript`, `python` |
+| weight       | string | No       | How heavily to weigh the assertion. Defaults to 1.0                                                     |
+| provider     | string | No       | Some assertions (similarity, llm-rubric, model-graded-\*) require an [LLM provider](/docs/providers)    |
+| rubricPrompt | string | No       | LLM rubric grading prompt                                                                               |
 
 ## Assertion types
 
-Deterministic eval metrics
+### Deterministic eval metrics
 
 | Assertion Type                                                  | Returns true if...                                               |
 | --------------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -48,13 +48,14 @@ Deterministic eval metrics
 | [contains-any](#contains-any)                                   | output contains any of the listed substrings                     |
 | [contains-json](#contains-json)                                 | output contains valid json (optional json schema validation)     |
 | [contains](#contains)                                           | output contains substring                                        |
+| [cost](#cost)                                                   | Inference cost is below a threshold                              |
 | [equals](#equality)                                             | output matches exactly                                           |
 | [icontains-all](#contains-all)                                  | output contains all list of substrings, case insensitive         |
 | [icontains-any](#contains-any)                                  | output contains any of the listed substrings, case insensitive   |
 | [icontains](#contains)                                          | output contains substring, case insensitive                      |
 | [is-json](#is-json)                                             | output is valid json (optional json schema validation)           |
 | [is-valid-openai-function-call](#is-valid-openai-function-call) | Ensure that the function call matches the function's JSON schema |
-| [is-valid-openai-tools-call](#is-valid-openai-tools-call) | Ensure all tool calls match the tools JSON schema |
+| [is-valid-openai-tools-call](#is-valid-openai-tools-call)       | Ensure all tool calls match the tools JSON schema                |
 | [javascript](/docs/configuration/expected-outputs/javascript)   | provided Javascript function validates the output                |
 | [latency](#latency)                                             | Latency is below a threshold (milliseconds)                      |
 | [levenshtein](#levenshtein-distance)                            | Levenshtein distance is below a threshold                        |
@@ -65,7 +66,7 @@ Deterministic eval metrics
 | [webhook](#webhook)                                             | provided webhook returns \{pass: true\}                          |
 | rouge-n                                                         | Rouge-N score is above a given threshold                         |
 
-Model-assisted eval metrics
+### Model-assisted eval metrics
 
 | Assertion Type                                                             | Method                                                                          |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -82,6 +83,8 @@ Model-assisted eval metrics
 :::tip
 Every test type can be negated by prepending `not-`. For example, `not-equals` or `not-regex`.
 :::
+
+## Assertion details
 
 ### Equality
 
@@ -354,6 +357,24 @@ assert:
 Perplexity requires the LLM API to output `logprobs`. Currently only more recent versions of OpenAI GPT support this.
 :::
 
+### Cost
+
+The `cost` assertion checks if the cost of the LLM call is below a specified threshold.
+
+This requires LLM providers to return cost information. Currently this is only supported by OpenAI GPT models and custom providers.
+
+Example:
+
+```yaml
+providers:
+  - openai:gpt-3.5-turbo
+  - openai:gpt-4
+assert:
+  # Pass if the LLM call costs less than $0.001
+  - type: cost
+    threshold: 0.001
+```
+
 #### Comparing different outputs from the same LLM
 
 You can compare perplexity scores across different outputs from the same model to get a sense of which output the model finds more likely (or less surprising). This is a good way to tune your prompts and hyperparameters (like temperature) to be more accurate.
@@ -521,6 +542,8 @@ All assertion types can be used in `__expected`. The column supports exactly one
 
 When the `__expected` field is provided, the success and failure statistics in the evaluation summary will be based on whether the expected criteria are met.
 
+To run multiple assertions, use column names `__expected1`, `__expected2`, `__expected3`, etc.
+
 For more advanced test cases, we recommend using a testing framework like [Jest](/docs/integrations/jest) or [Mocha](/docs/integrations/mocha-chai) and using promptfoo [as a library](/docs/usage/node-package).
 
 ## Reusing assertions with templates
@@ -552,7 +575,7 @@ tests:
 
 In this example, the `containsMentalHealth` assertion template is defined at the top of the configuration file and then reused in two test cases. This approach helps maintain consistency and reduces duplication in your configuration.
 
-## Labeling assertions
+## Defining metrics from assertions
 
 Each assertion supports a `metrics` field that allows you to tag the result however you like. Use this feature to combine related assertions into aggregate metrics.
 
@@ -592,3 +615,5 @@ tests:
 These metrics will be shown in the UI:
 
 ![llm eval metrics](/img/docs/named-metrics.png)
+
+See [named metrics example](https://github.com/promptfoo/promptfoo/tree/main/examples/named-metrics).

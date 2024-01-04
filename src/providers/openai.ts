@@ -19,6 +19,7 @@ interface OpenAiSharedOptions {
   apiHost?: string;
   apiBaseUrl?: string;
   organization?: string;
+  cost?: number;
 }
 
 type OpenAiCompletionOptions = OpenAiSharedOptions & {
@@ -244,8 +245,8 @@ export class OpenAiCompletionProvider extends OpenAiGenericProvider {
       frequency_penalty:
         this.config.frequency_penalty ?? parseFloat(process.env.OPENAI_FREQUENCY_PENALTY || '0'),
       best_of: this.config.best_of ?? parseInt(process.env.OPENAI_BEST_OF || '1'),
-      logprobs: callApiOptions?.includeLogProbs || undefined,
-      stop,
+      ...(callApiOptions?.includeLogProbs ? { logprobs: callApiOptions.includeLogProbs } : {}),
+      ...(stop ? { stop } : {}),
     };
     logger.debug(`Calling OpenAI API: ${JSON.stringify(body)}`);
     let data,
@@ -281,7 +282,7 @@ export class OpenAiCompletionProvider extends OpenAiGenericProvider {
               completion: data.usage.completion_tokens,
             },
         cached,
-        cost: calculateCost(this.modelName, data.usage.prompt_tokens, data.usage.completion_tokens),
+        cost: calculateCost(this.modelName, this.config, data.usage.prompt_tokens, data.usage.completion_tokens),
       };
     } catch (err) {
       return {
@@ -379,13 +380,13 @@ export class OpenAiChatCompletionProvider extends OpenAiGenericProvider {
         this.config.presence_penalty ?? parseFloat(process.env.OPENAI_PRESENCE_PENALTY || '0'),
       frequency_penalty:
         this.config.frequency_penalty ?? parseFloat(process.env.OPENAI_FREQUENCY_PENALTY || '0'),
-      functions: this.config.functions || undefined,
-      function_call: this.config.function_call || undefined,
-      tools: this.config.tools || undefined,
-      tool_choice: this.config.tool_choice || undefined,
-      response_format: this.config.response_format || undefined,
-      logprobs: callApiOptions?.includeLogProbs || undefined,
-      stop,
+      ...(this.config.functions ? { functions: this.config.functions } : {}),
+      ...(this.config.function_call ? { function_call: this.config.function_call } : {}),
+      ...(this.config.tools ? { tools: this.config.tools } : {}),
+      ...(this.config.tool_choice ? { tool_choice: this.config.tool_choice } : {}),
+      ...(this.config.response_format ? { response_format: this.config.response_format } : {}),
+      ...(callApiOptions?.includeLogProbs ? { logprobs: callApiOptions.includeLogProbs } : {}),
+      ...(this.config.stop ? { stop: this.config.stop } : {}),
     };
     logger.debug(`Calling OpenAI API: ${JSON.stringify(body)}`);
 
@@ -431,7 +432,7 @@ export class OpenAiChatCompletionProvider extends OpenAiGenericProvider {
             },
         cached,
         logProbs,
-        cost: calculateCost(this.modelName, data.usage.prompt_tokens, data.usage.completion_tokens),
+        cost: calculateCost(this.modelName, this.config, data.usage.prompt_tokens, data.usage.completion_tokens),
       };
     } catch (err) {
       return {
@@ -443,6 +444,7 @@ export class OpenAiChatCompletionProvider extends OpenAiGenericProvider {
 
 function calculateCost(
   modelName: string,
+  config: OpenAiSharedOptions,
   promptTokens: number,
   completionTokens: number,
 ): number | undefined {
@@ -453,7 +455,9 @@ function calculateCost(
   if (!model || !model.cost) {
     return undefined;
   }
-  return model.cost.input * promptTokens + model.cost.output * completionTokens || undefined;
+  const inputCost = config.cost ?? model.cost.input;
+  const outputCost = config.cost ?? model.cost.output;
+  return (inputCost * promptTokens + outputCost * completionTokens) || undefined;
 }
 
 interface AssistantMessagesResponseDataContent {

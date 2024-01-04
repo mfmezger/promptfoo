@@ -162,6 +162,10 @@ assertionTemplates:
 // highlight-end
 ```
 
+:::info
+`tools` and `functions` values in providers config are _not_ dereferenced.  This is because they are standalone JSON schemas that may  contain their own internal references.
+:::
+
 #### Import tests from separate files
 
 The `tests` config attribute takes a list of paths to files or directories. For example:
@@ -285,15 +289,13 @@ Running `promptfoo eval -p prompt.txt -c path_to.yaml` will call the Chat Comple
 
 Use Nunjucks templates to exert additional control over your prompt templates, including loops, conditionals, and more.
 
-### Other capabilities
+### Tools and functions
 
-#### Functions
-
-promptfoo supports OpenAI functions and other provider-specific configurations like temperature, number of tokens, and so on.
+promptfoo supports OpenAI tools, functions, and other provider-specific configurations like temperature, number of tokens, and so on.
 
 To use, override the `config` key of the provider. See example [here](/docs/providers/openai#using-functions).
 
-#### Postprocessing
+### Postprocessing
 
 The `TestCase.options.postprocess` field is a Javascript snippet that modifies the LLM output. Postprocessing occurs before any assertions are run.
 
@@ -342,9 +344,31 @@ tests:
 
 Tip: use `defaultTest` apply a postprocessing option to every test case in your test suite.
 
-## Configuration structure
+## Config structure and organization
 
 For detailed information on the config structure, see [Configuration Reference](/docs/configuration/reference).
+
+If you have multiple sets of tests, it helps to split them into multiple config files.  Use the `--config` or `-c` parameter to run each individual config:
+
+```
+promptfoo eval -c usecase1.yaml
+```
+and
+```
+promptfoo eval -c usecase2.yaml
+```
+
+You can run multiple configs at the same time, which will combine them into a single eval.  For example:
+
+```
+promptfoo eval -c my_configs/*
+```
+
+or
+
+```
+promptfoo eval -c config1.yaml -c config2.yaml -c config3.yaml
+```
 
 ## Loading tests from CSV
 
@@ -366,4 +390,4 @@ providers: [openai:gpt-3.5-turbo, localai:chat:vicuna]
 tests: https://docs.google.com/spreadsheets/d/1eqFnv1vzkPvS7zG-mYsqNDwOzvSaiIAsKB3zKg9H18c/edit?usp=sharing
 ```
 
-Here's a [full example](https://github.com/promptfoo/promptfoo/tree/main/examples/google-sheets). See also: **[import tests from another file](#loading-tests-from-file)**.
+Here's a [full example](https://github.com/promptfoo/promptfoo/tree/main/examples/google-sheets). 

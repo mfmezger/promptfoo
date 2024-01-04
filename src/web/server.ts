@@ -23,6 +23,7 @@ import {
   readResult,
   filenameToDate,
   getTestCases,
+  updateResult,
 } from '../util';
 
 interface Job {
@@ -45,7 +46,8 @@ export function startServer(port = 15500, apiBaseUrl = '', skipConfirmation = fa
 
   app.use(cors());
   app.use(compression());
-  app.use(express.json());
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ limit: '100mb' }));
 
   const httpServer = http.createServer(app);
   const io = new SocketIOServer(httpServer, {
@@ -134,6 +136,23 @@ export function startServer(port = 15500, apiBaseUrl = '', skipConfirmation = fa
     }
   });
 
+  app.post('/api/eval/:id', (req, res) => {
+    const id = req.params.id;
+    const evalTable = req.body.table;
+
+    if (!id) {
+      res.status(400).json({ error: 'Missing id' });
+      return;
+    }
+
+    try {
+      updateResult(id, evalTable);
+      res.json({ message: 'Eval table updated successfully' });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update eval table' });
+    }
+  });
+
   app.get('/results/:filename', (req, res) => {
     const filename = req.params.filename;
     const safeFilename = path.basename(filename);
@@ -196,7 +215,7 @@ export function startServer(port = 15500, apiBaseUrl = '', skipConfirmation = fa
         input: process.stdin,
         output: process.stdout,
       });
-      rl.question('Do you want to open the browser to the URL? (y/N): ', async (answer) => {
+      rl.question('Open URL in browser? (y/N): ', async (answer) => {
         if (answer.toLowerCase().startsWith('y')) {
           openUrl();
         }
